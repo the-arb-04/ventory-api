@@ -32,16 +32,20 @@ try
         .WriteTo.Console());
 
     // --- 3. Configure CORS ---
-    var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
-    builder.Services.AddCors(options =>
+   var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
     {
-        options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
+        var allowedOrigin = builder.Configuration["CorsSettings:AllowedOrigin"];
+        if (allowedOrigin != null)
         {
-            policy.WithOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:5174")
+            policy.WithOrigins(allowedOrigin)
                   .AllowAnyHeader()
                   .AllowAnyMethod();
-        });
+        }
     });
+});
 
     // --- 4. Register DbContext ---
     builder.Services.AddDbContext<InventoryDbContext>(options =>
@@ -152,22 +156,20 @@ try
 
     // --- 11. Middleware ---
     app.UseSerilogRequestLogging();
-    
-    app.UseSwagger();
-        app.UseSwaggerUI();
 
-    if (app.Environment.IsDevelopment())
-    {
+app.UseSwagger();
+app.UseSwaggerUI();
 
-    }
+app.UseHttpsRedirection();
 
-    app.UseHttpsRedirection();
-    app.UseCors(MyAllowSpecificOrigins);
+app.UseRouting(); // It's good practice to be explicit
 
-    app.UseAuthentication(); // ✅ Must come before UseAuthorization
-    app.UseAuthorization();
+app.UseCors(MyAllowSpecificOrigins); // <-- CORS is now in the right spot
 
-    app.MapControllers();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
 
     await app.RunAsync();
 }
